@@ -13,8 +13,6 @@ pub enum Precedence {
 pub struct Operator {
     pub sign: char,
     pub precedence: Precedence,
-    pub sign: char,
-    pub precedence: Precedence,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -67,8 +65,6 @@ impl Tokenizer {
                     if !self.ch.is_digit(10) {
                         return Err(format!("Invalid input received: {}", self.ch));
                     }
-                    tokens.push(Token::IntegerLiteral(self.read_int()));
-                    continue;
                     tokens.push(Token::IntegerLiteral(self.read_int()));
                     continue;
                 }
