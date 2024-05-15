@@ -1,19 +1,21 @@
-#[derive(Debug)]
+#[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Precedence {
-    OPEN,
-    EXPO,
-    MULT,
-    SUM,
     CLOSE,
+    MIN,
+    SUM,
+    MUL,
+    DIV,
+    EXP,
+    OPEN,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub struct Operator {
-    sign: char,
-    precedence: Precedence,
+    pub sign: char,
+    pub precedence: Precedence,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Clone)]
 pub enum Token {
     IntegerLiteral(u64),
     Operator(Operator),
@@ -53,15 +55,18 @@ impl Tokenizer {
             self.skip_space();
             match self.ch {
                 '(' => tokens.push(self.op_token(self.ch, Precedence::OPEN)),
+                '^' => tokens.push(self.op_token(self.ch, Precedence::EXP)),
+                '/' => tokens.push(self.op_token(self.ch, Precedence::DIV)),
+                '*' => tokens.push(self.op_token(self.ch, Precedence::MUL)),
+                '+' => tokens.push(self.op_token(self.ch, Precedence::SUM)),
+                '-' => tokens.push(self.op_token(self.ch, Precedence::MIN)),
                 ')' => tokens.push(self.op_token(self.ch, Precedence::CLOSE)),
-                '+' | '-' => tokens.push(self.op_token(self.ch, Precedence::SUM)),
-                '*' | '/' => tokens.push(self.op_token(self.ch, Precedence::MULT)),
-                '^' => tokens.push(self.op_token(self.ch, Precedence::EXPO)),
                 _ => {
                     if !self.ch.is_digit(10) {
                         return Err(format!("Invalid input received: {}", self.ch));
                     }
-                    tokens.push(Token::IntegerLiteral(self.read_int()))
+                    tokens.push(Token::IntegerLiteral(self.read_int()));
+                    continue;
                 }
             }
             self.read();
