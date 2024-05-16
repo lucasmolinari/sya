@@ -17,7 +17,7 @@ pub struct Operator {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
-    IntegerLiteral(u64),
+    IntegerLiteral(i64),
     Operator(Operator),
 }
 
@@ -78,13 +78,13 @@ impl Tokenizer {
         Token::Operator(Operator { sign, precedence })
     }
 
-    fn read_int(&mut self) -> u64 {
+    fn read_int(&mut self) -> i64 {
         let pos = self.position;
         while self.ch.is_digit(10) {
             self.read();
         }
 
-        self.input[pos..self.position].parse::<u64>().unwrap()
+        self.input[pos..self.position].parse::<i64>().unwrap()
     }
 
     fn skip_space(&mut self) {
