@@ -1,4 +1,4 @@
-use crate::tokenizer::{Operator, Precedence};
+use crate::tokenizer::{Operator, Precedence, Token, Tokenizer};
 
 use super::*;
 
@@ -63,7 +63,7 @@ fn test_tokenizer() {
 #[test]
 fn test_rpn() {
     let mut sya = Sya::new("1 + 2 * 4 - 3").expect("Should Construct");
-    sya.rpn();
+    sya.calculate().expect("Should Calculate");
     let rpn = sya.rpn_stack;
 
     assert_eq!(Token::IntegerLiteral(1), rpn[0]);
@@ -91,4 +91,20 @@ fn test_rpn() {
         }),
         rpn[6]
     );
+}
+
+#[test]
+fn test_calculate() {
+    let mut sya = Sya::new("1 + 2 * 4 - 3").expect("Should Construct");
+
+    assert_eq!(Ok(()), sya.calculate());
+    assert_eq!(Some(6), sya.out);
+
+    sya.new_input("1 - 2").expect("Should Parse");
+    assert_eq!(Ok(()), sya.calculate());
+    assert_eq!(Some(-1), sya.out);
+
+    sya.new_input("").expect("Should Parse");
+    assert_eq!(Err("Couldn't find a result"), sya.calculate());
+    assert_eq!(None, sya.out);
 }
