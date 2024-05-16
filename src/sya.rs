@@ -1,3 +1,5 @@
+use crate::tokenizer::Precedence;
+
 use super::tokenizer::{Operator, Token, Tokenizer};
 
 #[derive(Debug)]
@@ -25,15 +27,15 @@ impl Sya {
         Ok(())
     }
 
-    pub fn calculate(&mut self) -> Result<(), &str> {
-        self.rpn();
+    pub fn calculate(&mut self) -> Result<(), String> {
+        self.rpn()?;
         let mut operation_stack = Vec::new();
         for token in &self.rpn_stack {
             match token {
                 Token::IntegerLiteral(i) => operation_stack.push(*i),
                 Token::Operator(o) => {
                     if operation_stack.len() < 2 {
-                        return Err("Operation stack doesn't have 2 elements.");
+                        return Err("Operation stack doesn't have 2 elements.".to_string());
                     }
                     let b = operation_stack.pop().unwrap();
                     let a = operation_stack.pop().unwrap();
@@ -49,7 +51,7 @@ impl Sya {
 
                     match result {
                         Some(i) => operation_stack.push(i),
-                        None => return Err("Invalid Operation"),
+                        None => return Err("Invalid Operation".to_string()),
                     }
                 }
             }
@@ -59,30 +61,44 @@ impl Sya {
         Ok(())
     }
 
-    fn rpn(&mut self) {
+    fn rpn(&mut self) -> Result<(), &str> {
         let mut holding_stack: Vec<&Operator> = Vec::new();
         for token in &self.input {
             match token {
-                Token::IntegerLiteral(_) => {
-                    self.rpn_stack.push(token.to_owned());
-                }
-                Token::Operator(o) => {
-                    while let Some(&last) = holding_stack.last() {
-                        if last.precedence <= o.precedence {
-                            break;
+                Token::IntegerLiteral(_) => self.rpn_stack.push(token.clone()),
+                Token::Operator(o) => match o.precedence {
+                    Precedence::OPEN => holding_stack.push(o),
+                    Precedence::CLOSE => {
+                        while let Some(&last) = holding_stack.last() {
+                            if last.precedence == Precedence::OPEN {
+                                break;
+                            }
+                            self.rpn_stack.push(Token::Operator(last.clone()));
+                            holding_stack.pop();
                         }
-                        self.rpn_stack.push(Token::Operator(last.to_owned()));
-                        holding_stack.pop();
+                        match holding_stack.last() {
+                            Some(_) => holding_stack.pop(),
+                            None => return Err("Expected Open Parenthesis '('"),
+                        };
                     }
-
-                    holding_stack.push(o);
-                }
-            };
+                    _ => {
+                        while let Some(&last) = holding_stack.last() {
+                            if last.precedence <= o.precedence {
+                                break;
+                            }
+                            self.rpn_stack.push(Token::Operator(last.clone()));
+                            holding_stack.pop();
+                        }
+                        holding_stack.push(o);
+                    }
+                },
+            }
         }
 
         for o in holding_stack {
-            self.rpn_stack.push(Token::Operator(o.to_owned()));
+            self.rpn_stack.push(Token::Operator(o.clone()));
         }
+        Ok(())
     }
 
     pub fn rpn_formatted(&self) -> String {

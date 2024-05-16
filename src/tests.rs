@@ -107,6 +107,28 @@ fn test_calculate() {
     assert_eq!(Some(-1), sya.out);
 
     sya.new_input("").expect("Should Parse");
-    assert_eq!(Err("Couldn't find a result"), sya.calculate());
+    assert_eq!(Err("Couldn't find a result".to_string()), sya.calculate());
     assert_eq!(None, sya.out);
+}
+
+#[test]
+fn test_paren() {
+    let mut sya = Sya::new("5 * (1 + 2)").expect("Should Construct");
+
+    assert_eq!(Ok(()), sya.calculate());
+    assert_eq!(Some(15), sya.out);
+
+    sya.new_input("(1 + (1 + 2))").expect("Should Parse");
+    assert_eq!(Ok(()), sya.calculate());
+    assert_eq!(Some(4), sya.out);
+
+    sya.new_input("(((((1)))))").expect("Should Parse");
+    assert_eq!(Ok(()), sya.calculate());
+    assert_eq!(Some(1), sya.out);
+
+    sya.new_input("5 ) + 1").expect("Should Parse");
+    assert_eq!(
+        Err("Expected Open Parenthesis '('".to_string()),
+        sya.calculate()
+    );
 }

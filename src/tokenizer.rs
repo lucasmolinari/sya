@@ -1,12 +1,12 @@
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Precedence {
-    CLOSE,
+    OPEN,
     MIN,
     SUM,
     MUL,
     DIV,
     EXP,
-    OPEN,
+    CLOSE,
 }
 
 #[derive(Debug, PartialEq, Clone)]
