@@ -64,7 +64,7 @@ fn test_tokenizer() {
 fn test_rpn() {
     let mut sya = Sya::new("1 + 2 * 4 - 3").expect("Should Construct");
     sya.calculate().expect("Should Calculate");
-    let rpn = sya.rpn_stack;
+    let rpn = &sya.rpn_stack;
 
     assert_eq!(Token::IntegerLiteral(1), rpn[0]);
     assert_eq!(Token::IntegerLiteral(2), rpn[1]);
@@ -91,6 +91,8 @@ fn test_rpn() {
         }),
         rpn[6]
     );
+
+    assert_eq!(sya.rpn_formatted(), "1 2 4 * + 3 -")
 }
 
 #[test]

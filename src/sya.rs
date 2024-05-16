@@ -84,8 +84,15 @@ impl Sya {
             self.rpn_stack.push(Token::Operator(o.to_owned()));
         }
     }
-    #[allow(dead_code)]
-    fn format_rpn(&self) -> &str {
-        todo!()
+
+    pub fn rpn_formatted(&self) -> String {
+        self.rpn_stack
+            .iter()
+            .map(|token| match token {
+                Token::IntegerLiteral(i) => i.to_string(),
+                Token::Operator(o) => o.sign.to_string(),
+            })
+            .collect::<Vec<_>>()
+            .join(" ")
     }
 }
