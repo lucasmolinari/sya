@@ -21,7 +21,9 @@ impl Sya {
 
     pub fn new_input(&mut self, input: &str) -> Result<(), String> {
         let mut tokenizer = Tokenizer::new(input);
-        self.input = tokenizer.parse()?;
+        let tokens = tokenizer.parse()?;
+        dbg!(&tokens);
+        self.input = tokens.clone();
         self.rpn_stack.clear();
         self.out = None;
         Ok(())
@@ -34,9 +36,26 @@ impl Sya {
             match token {
                 Token::IntegerLiteral(i) => operation_stack.push(*i),
                 Token::Operator(o) => {
-                    if operation_stack.len() < 2 {
-                        return Err("Operation stack doesn't have 2 elements.".to_string());
+                    if o.precedence == Precedence::UNARY {
+                        let a = match operation_stack.pop() {
+                            Some(n) => n,
+                            None => return Err("Empty operation stack".to_string()),
+                        };
+                        match o.sign {
+                            '+' => operation_stack.push(a),
+                            '-' => operation_stack.push(-a),
+                            _ => return Err("Wrong unary sign".to_string()),
+                        };
+                        continue;
                     }
+
+                    if operation_stack.len() < 2 {
+                        return Err(format!(
+                            "Operation stack doesn't have enough arguments.\nStoped at:\nOP: {:?}\nSTACK:{:?}",
+                            o, operation_stack
+                        ));
+                    }
+
                     let b = operation_stack.pop().unwrap();
                     let a = operation_stack.pop().unwrap();
 
@@ -67,7 +86,7 @@ impl Sya {
             match token {
                 Token::IntegerLiteral(_) => self.rpn_stack.push(token.clone()),
                 Token::Operator(o) => match o.precedence {
-                    Precedence::OPEN => holding_stack.push(o),
+                    Precedence::OPEN | Precedence::UNARY => holding_stack.push(o),
                     Precedence::CLOSE => {
                         while let Some(&last) = holding_stack.last() {
                             if last.precedence == Precedence::OPEN {

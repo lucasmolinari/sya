@@ -6,6 +6,7 @@ pub enum Precedence {
     MUL,
     DIV,
     EXP,
+    UNARY,
     CLOSE,
 }
 
@@ -22,6 +23,7 @@ pub enum Token {
 }
 
 pub struct Tokenizer {
+    tokens: Vec<Token>,
     input: String,
     position: usize,
     read_position: usize,
@@ -30,6 +32,7 @@ pub struct Tokenizer {
 impl Tokenizer {
     pub fn new(input: &str) -> Tokenizer {
         let mut t = Tokenizer {
+            tokens: Vec::new(),
             input: input.to_owned(),
             position: 0,
             read_position: 0,
@@ -49,29 +52,45 @@ impl Tokenizer {
         self.read_position += 1;
     }
 
-    pub fn parse(&mut self) -> Result<Vec<Token>, String> {
-        let mut tokens = Vec::new();
+    pub fn parse(&mut self) -> Result<&Vec<Token>, String> {
         while self.ch != '\0' {
             self.skip_space();
             match self.ch {
-                '(' => tokens.push(self.op_token(self.ch, Precedence::OPEN)),
-                '^' => tokens.push(self.op_token(self.ch, Precedence::EXP)),
-                '/' => tokens.push(self.op_token(self.ch, Precedence::DIV)),
-                '*' => tokens.push(self.op_token(self.ch, Precedence::MUL)),
-                '+' => tokens.push(self.op_token(self.ch, Precedence::SUM)),
-                '-' => tokens.push(self.op_token(self.ch, Precedence::MIN)),
-                ')' => tokens.push(self.op_token(self.ch, Precedence::CLOSE)),
+                '(' => self.tokens.push(self.op_token(self.ch, Precedence::OPEN)),
+                '^' => self.tokens.push(self.op_token(self.ch, Precedence::EXP)),
+                '/' => self.tokens.push(self.op_token(self.ch, Precedence::DIV)),
+                '*' => self.tokens.push(self.op_token(self.ch, Precedence::MUL)),
+                '+' => {
+                    let token = self.handle_unary(Precedence::SUM);
+                    self.tokens.push(token);
+                }
+                '-' => {
+                    let token = self.handle_unary(Precedence::MIN);
+                    self.tokens.push(token)
+                }
+                ')' => self.tokens.push(self.op_token(self.ch, Precedence::CLOSE)),
                 _ => {
                     if !self.ch.is_digit(10) {
                         return Err(format!("Invalid input received: {}", self.ch));
                     }
-                    tokens.push(Token::IntegerLiteral(self.read_int()));
+                    let int = self.read_int();
+                    self.tokens.push(Token::IntegerLiteral(int));
                     continue;
                 }
             }
             self.read();
         }
-        Ok(tokens)
+        Ok(&self.tokens)
+    }
+
+    fn handle_unary(&mut self, precedence: Precedence) -> Token {
+        match self.tokens.last() {
+            Some(Token::Operator(o)) if o.precedence == Precedence::CLOSE => {
+                self.op_token(self.ch, precedence)
+            }
+            Some(Token::Operator(_)) | None => self.op_token(self.ch, Precedence::UNARY),
+            Some(Token::IntegerLiteral(_)) => self.op_token(self.ch, precedence),
+        }
     }
 
     fn op_token(&self, sign: char, precedence: Precedence) -> Token {
