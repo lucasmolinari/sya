@@ -1,4 +1,4 @@
-use crate::tokenizer::Precedence;
+use crate::{number::Number, tokenizer::Precedence};
 
 use super::tokenizer::{Operator, Token, Tokenizer};
 
@@ -6,7 +6,7 @@ use super::tokenizer::{Operator, Token, Tokenizer};
 pub struct Sya {
     pub input: Vec<Token>,
     pub rpn_stack: Vec<Token>,
-    pub out: Option<i64>,
+    pub out: Option<Number>,
 }
 impl Sya {
     pub fn new(input: &str) -> Result<Sya, String> {
@@ -22,7 +22,6 @@ impl Sya {
     pub fn new_input(&mut self, input: &str) -> Result<(), String> {
         let mut tokenizer = Tokenizer::new(input);
         let tokens = tokenizer.parse()?;
-        dbg!(&tokens);
         self.input = tokens.clone();
         self.rpn_stack.clear();
         self.out = None;
@@ -34,16 +33,16 @@ impl Sya {
         let mut operation_stack = Vec::new();
         for token in &self.rpn_stack {
             match token {
-                Token::IntegerLiteral(i) => operation_stack.push(*i),
+                Token::Number(i) => operation_stack.push(i.clone()),
                 Token::Operator(o) => {
                     if o.precedence == Precedence::UNARY {
-                        let a = match operation_stack.pop() {
+                        let n = match operation_stack.pop() {
                             Some(n) => n,
                             None => return Err("Empty operation stack".to_string()),
                         };
                         match o.sign {
-                            '+' => operation_stack.push(a),
-                            '-' => operation_stack.push(-a),
+                            '-' => operation_stack.push(n.negate()),
+                            '+' => operation_stack.push(n),
                             _ => return Err("Wrong unary sign".to_string()),
                         };
                         continue;
@@ -64,7 +63,7 @@ impl Sya {
                         '-' => a.checked_sub(b),
                         '*' => a.checked_mul(b),
                         '/' => a.checked_div(b),
-                        '^' => a.checked_pow(b as u32),
+                        '^' => a.checked_pow(b.as_u32()),
                         _ => None,
                     };
 
@@ -76,7 +75,7 @@ impl Sya {
             }
         }
         let last = operation_stack.last().ok_or("Couldn't find a result")?;
-        self.out = Some(*last);
+        self.out = Some(last.clone());
         Ok(())
     }
 
@@ -84,7 +83,7 @@ impl Sya {
         let mut holding_stack: Vec<&Operator> = Vec::new();
         for token in &self.input {
             match token {
-                Token::IntegerLiteral(_) => self.rpn_stack.push(token.clone()),
+                Token::Number(_) => self.rpn_stack.push(token.clone()),
                 Token::Operator(o) => match o.precedence {
                     Precedence::OPEN | Precedence::UNARY => holding_stack.push(o),
                     Precedence::CLOSE => {
@@ -124,7 +123,7 @@ impl Sya {
         self.rpn_stack
             .iter()
             .map(|token| match token {
-                Token::IntegerLiteral(i) => i.to_string(),
+                Token::Number(n) => n.to_string(),
                 Token::Operator(o) => o.sign.to_string(),
             })
             .collect::<Vec<_>>()

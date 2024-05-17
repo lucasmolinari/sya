@@ -1,3 +1,5 @@
+use crate::number::Number;
+
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Precedence {
     OPEN,
@@ -18,7 +20,7 @@ pub struct Operator {
 
 #[derive(Debug, PartialEq, Clone)]
 pub enum Token {
-    IntegerLiteral(i64),
+    Number(Number),
     Operator(Operator),
 }
 
@@ -73,8 +75,8 @@ impl Tokenizer {
                     if !self.ch.is_digit(10) {
                         return Err(format!("Invalid input received: {}", self.ch));
                     }
-                    let int = self.read_int();
-                    self.tokens.push(Token::IntegerLiteral(int));
+                    let number = self.read_number();
+                    self.tokens.push(Token::Number(number));
                     continue;
                 }
             }
@@ -89,7 +91,7 @@ impl Tokenizer {
                 self.op_token(self.ch, precedence)
             }
             Some(Token::Operator(_)) | None => self.op_token(self.ch, Precedence::UNARY),
-            Some(Token::IntegerLiteral(_)) => self.op_token(self.ch, precedence),
+            Some(Token::Number(_)) => self.op_token(self.ch, precedence),
         }
     }
 
@@ -97,13 +99,18 @@ impl Tokenizer {
         Token::Operator(Operator { sign, precedence })
     }
 
-    fn read_int(&mut self) -> i64 {
+    fn read_number(&mut self) -> Number {
         let pos = self.position;
-        while self.ch.is_digit(10) {
+        while self.ch.is_digit(10) || self.ch == '.' {
             self.read();
         }
 
-        self.input[pos..self.position].parse::<i64>().unwrap()
+        let n = &self.input[pos..self.position];
+        if n.contains('.') {
+            Number::Float(n.parse().unwrap())
+        } else {
+            Number::Integer(n.parse().unwrap())
+        }
     }
 
     fn skip_space(&mut self) {
