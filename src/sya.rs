@@ -113,7 +113,7 @@ impl Sya {
             }
         }
 
-        for o in holding_stack {
+        while let Some(o) = holding_stack.pop() {
             self.rpn_stack.push(Token::Operator(o.clone()));
         }
         Ok(())

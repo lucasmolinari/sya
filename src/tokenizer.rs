@@ -2,7 +2,7 @@ use crate::number::Number;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Precedence {
-    OPEN,
+    OPEN = 0,
     MIN,
     SUM,
     MUL,

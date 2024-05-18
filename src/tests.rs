@@ -73,37 +73,17 @@ fn test_unary_results() {
 
 #[test]
 fn test_rpn() {
-    let mut sya = Sya::new("1 + 2 * 4 - 3").expect("Should Construct");
+    let mut sya = Sya::new("-5 * 39 - (10 + 1) / 2").expect("Should Construct");
     sya.calculate().expect("Should Calculate");
-    let rpn = &sya.rpn_stack;
+    assert_eq!(sya.rpn_formatted(), "5 - 39 * 10 1 + 2 / -");
 
-    assert_eq!(Token::Number(Number::Integer(1)), rpn[0]);
-    assert_eq!(Token::Number(Number::Integer(2)), rpn[1]);
-    assert_eq!(Token::Number(Number::Integer(4)), rpn[2]);
+    sya.new_input("(1 * 100) - - (3 ^ (4 / 2 + 1) + (2)) * + 30 ^ 1")
+        .expect("Should Parse");
+    sya.calculate().expect("Should Calculate");
     assert_eq!(
-        Token::Operator(Operator {
-            sign: '*',
-            precedence: Precedence::MUL
-        }),
-        rpn[3]
-    );
-    assert_eq!(
-        Token::Operator(Operator {
-            sign: '+',
-            precedence: Precedence::SUM
-        }),
-        rpn[4]
-    );
-    assert_eq!(Token::Number(Number::Integer(3)), rpn[5]);
-    assert_eq!(
-        Token::Operator(Operator {
-            sign: '-',
-            precedence: Precedence::MIN
-        }),
-        rpn[6]
-    );
-
-    assert_eq!(sya.rpn_formatted(), "1 2 4 * + 3 -");
+        sya.rpn_formatted(),
+        "1 100 * 3 4 2 / 1 + ^ 2 + - 30 + 1 ^ * -",
+    )
 }
 
 #[test]
@@ -116,6 +96,16 @@ fn test_calculate() {
     sya.new_input("1 - 2").expect("Should Parse");
     assert_eq!(Ok(()), sya.calculate());
     assert_eq!(Some(Number::Integer(-1)), sya.out);
+
+    sya.new_input("-5 * 39 - (10 + 1) / 2")
+        .expect("Should Parse");
+    assert_eq!(Ok(()), sya.calculate());
+    assert_eq!(Some(Number::Float(-200.5)), sya.out);
+
+    sya.new_input("(1 * 100) - - (3 ^ (4 / 2 + 1) + (2)) * + 30 ^ 1")
+        .expect("Should Parse");
+    assert_eq!(Ok(()), sya.calculate());
+    assert_eq!(Some(Number::Integer(970)), sya.out);
 
     sya.new_input("").expect("Should Parse");
     assert_eq!(Err("Couldn't find a result".to_string()), sya.calculate());
