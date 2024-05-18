@@ -2,14 +2,11 @@ use crate::number::Number;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
 pub enum Precedence {
-    OPEN = 0,
     MIN,
     SUM,
     MUL,
-    DIV,
     EXP,
-    UNARY,
-    CLOSE,
+    MAX,
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -22,6 +19,19 @@ pub struct Operator {
 pub enum Token {
     Number(Number),
     Operator(Operator),
+    UNARY(char),
+    OPEN,
+    CLOSE,
+}
+impl Token {
+    pub fn precedence(&self) -> Option<&Precedence> {
+        match self {
+            Token::Operator(o) => Some(&o.precedence),
+            Token::UNARY(_) | Token::CLOSE => Some(&Precedence::MAX),
+            Token::OPEN => Some(&Precedence::MIN),
+            _ => None,
+        }
+    }
 }
 
 pub struct Tokenizer {
@@ -58,19 +68,19 @@ impl Tokenizer {
         while self.ch != '\0' {
             self.skip_space();
             match self.ch {
-                '(' => self.tokens.push(self.op_token(self.ch, Precedence::OPEN)),
+                '(' => self.tokens.push(Token::OPEN),
                 '^' => self.tokens.push(self.op_token(self.ch, Precedence::EXP)),
-                '/' => self.tokens.push(self.op_token(self.ch, Precedence::DIV)),
+                '/' => self.tokens.push(self.op_token(self.ch, Precedence::MUL)),
                 '*' => self.tokens.push(self.op_token(self.ch, Precedence::MUL)),
                 '+' => {
                     let token = self.handle_unary(Precedence::SUM);
                     self.tokens.push(token);
                 }
                 '-' => {
-                    let token = self.handle_unary(Precedence::MIN);
+                    let token = self.handle_unary(Precedence::SUM);
                     self.tokens.push(token)
                 }
-                ')' => self.tokens.push(self.op_token(self.ch, Precedence::CLOSE)),
+                ')' => self.tokens.push(Token::CLOSE),
                 _ => {
                     if !self.ch.is_digit(10) {
                         return Err(format!("Invalid input received: {}", self.ch));
@@ -87,11 +97,9 @@ impl Tokenizer {
 
     fn handle_unary(&mut self, precedence: Precedence) -> Token {
         match self.tokens.last() {
-            Some(Token::Operator(o)) if o.precedence == Precedence::CLOSE => {
-                self.op_token(self.ch, precedence)
-            }
-            Some(Token::Operator(_)) | None => self.op_token(self.ch, Precedence::UNARY),
-            Some(Token::Number(_)) => self.op_token(self.ch, precedence),
+            Some(Token::CLOSE) | Some(Token::Number(_)) => self.op_token(self.ch, precedence),
+            // Some(Token::UNARY(_)) => self.op_token(self.ch, precedence),
+            _ => Token::UNARY(self.ch),
         }
     }
 

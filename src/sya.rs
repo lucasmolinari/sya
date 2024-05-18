@@ -1,6 +1,6 @@
-use crate::{number::Number, tokenizer::Precedence};
+use crate::number::Number;
 
-use super::tokenizer::{Operator, Token, Tokenizer};
+use super::tokenizer::{Token, Tokenizer};
 
 #[derive(Debug)]
 pub struct Sya {
@@ -34,23 +34,22 @@ impl Sya {
         for token in &self.rpn_stack {
             match token {
                 Token::Number(i) => operation_stack.push(i.clone()),
-                Token::Operator(o) => {
-                    if o.precedence == Precedence::UNARY {
-                        let n = match operation_stack.pop() {
-                            Some(n) => n,
-                            None => return Err("Empty operation stack".to_string()),
-                        };
-                        match o.sign {
-                            '-' => operation_stack.push(n.negate()),
-                            '+' => operation_stack.push(n),
-                            _ => return Err("Wrong unary sign".to_string()),
-                        };
-                        continue;
-                    }
+                Token::UNARY(s) => {
+                    let n = match operation_stack.pop() {
+                        Some(n) => n,
+                        None => return Err("Empty operation stack".to_string()),
+                    };
+                    match s {
+                        '-' => operation_stack.push(n.negate()),
+                        '+' => operation_stack.push(n),
+                        _ => return Err("Wrong unary sign".to_string()),
+                    };
+                }
 
+                Token::Operator(o) => {
                     if operation_stack.len() < 2 {
                         return Err(format!(
-                            "Operation stack doesn't have enough arguments.\nStoped at:\nOP: {:?}\nSTACK:{:?}",
+                            "Operation stack doesn't have enough arguments. OP: {:?} STACK:{:?}",
                             o, operation_stack
                         ));
                     }
@@ -72,49 +71,58 @@ impl Sya {
                         None => return Err("Invalid Operation".to_string()),
                     }
                 }
+                _ => return Err("Invalid Token fould in RPN".to_string()),
             }
         }
-        let last = operation_stack.last().ok_or("Couldn't find a result")?;
+
+        if operation_stack.len() != 1 {
+            return Err("Invalid Operation".to_string());
+        }
+        let last = operation_stack.last().unwrap();
         self.out = Some(last.clone());
         Ok(())
     }
 
     fn rpn(&mut self) -> Result<(), &str> {
-        let mut holding_stack: Vec<&Operator> = Vec::new();
+        let mut holding_stack: Vec<&Token> = Vec::new();
         for token in &self.input {
             match token {
                 Token::Number(_) => self.rpn_stack.push(token.clone()),
-                Token::Operator(o) => match o.precedence {
-                    Precedence::OPEN | Precedence::UNARY => holding_stack.push(o),
-                    Precedence::CLOSE => {
-                        while let Some(&last) = holding_stack.last() {
-                            if last.precedence == Precedence::OPEN {
-                                break;
-                            }
-                            self.rpn_stack.push(Token::Operator(last.clone()));
-                            holding_stack.pop();
+                Token::OPEN | Token::UNARY(_) => holding_stack.push(token),
+                Token::CLOSE => {
+                    while let Some(&last) = holding_stack.last() {
+                        if last == &Token::OPEN {
+                            break;
                         }
-                        match holding_stack.last() {
-                            Some(_) => holding_stack.pop(),
-                            None => return Err("Expected Open Parenthesis '('"),
-                        };
+                        self.rpn_stack.push(last.clone());
+                        holding_stack.pop();
                     }
-                    _ => {
-                        while let Some(&last) = holding_stack.last() {
-                            if last.precedence <= o.precedence {
-                                break;
-                            }
-                            self.rpn_stack.push(Token::Operator(last.clone()));
-                            holding_stack.pop();
+                    match holding_stack.last() {
+                        Some(_) => holding_stack.pop(),
+                        None => return Err("Expected Open Parenthesis '('"),
+                    };
+                }
+                Token::Operator(o) => {
+                    while let Some(&last) = holding_stack.last() {
+                        println!(
+                            "Last: {:?} || Current: {:?}",
+                            last.precedence().unwrap(),
+                            o.precedence
+                        );
+                        if last.precedence() < Some(&o.precedence) {
+                            println!("Breaking");
+                            break;
                         }
-                        holding_stack.push(o);
+                        self.rpn_stack.push(last.clone());
+                        holding_stack.pop();
                     }
-                },
+                    holding_stack.push(token);
+                }
             }
         }
 
         while let Some(o) = holding_stack.pop() {
-            self.rpn_stack.push(Token::Operator(o.clone()));
+            self.rpn_stack.push(o.clone());
         }
         Ok(())
     }
@@ -125,6 +133,9 @@ impl Sya {
             .map(|token| match token {
                 Token::Number(n) => n.to_string(),
                 Token::Operator(o) => o.sign.to_string(),
+                Token::UNARY(s) => format!("u{}", s),
+                Token::OPEN => "(".to_string(),
+                Token::CLOSE => ")".to_string(),
             })
             .collect::<Vec<_>>()
             .join(" ")
