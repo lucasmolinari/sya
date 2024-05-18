@@ -104,13 +104,7 @@ impl Sya {
                 }
                 Token::Operator(o) => {
                     while let Some(&last) = holding_stack.last() {
-                        println!(
-                            "Last: {:?} || Current: {:?}",
-                            last.precedence().unwrap(),
-                            o.precedence
-                        );
                         if last.precedence() < Some(&o.precedence) {
-                            println!("Breaking");
                             break;
                         }
                         self.rpn_stack.push(last.clone());

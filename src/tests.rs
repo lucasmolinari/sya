@@ -107,7 +107,7 @@ fn test_calculate() {
     assert_eq!(Some(Number::Integer(970)), sya.out);
 
     sya.new_input("").expect("Should Parse");
-    assert_eq!(Err("Couldn't find a result".to_string()), sya.calculate());
+    assert_eq!(Err("Invalid Operation".to_string()), sya.calculate());
     assert_eq!(None, sya.out);
 }
 
