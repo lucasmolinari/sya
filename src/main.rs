@@ -1,6 +1,7 @@
 #[cfg(test)]
 mod tests;
 
+mod errors;
 mod number;
 mod sya;
 mod tokenizer;
@@ -27,7 +28,7 @@ fn main() {
         match sya.new_input(&input.trim()) {
             Ok(_) => {}
             Err(e) => {
-                eprintln!("Error parsing input: {}", e);
+                eprintln!("Error parsing input:\n{}", e);
                 continue;
             }
         };
@@ -35,7 +36,7 @@ fn main() {
         match sya.calculate() {
             Ok(_) => {}
             Err(e) => {
-                eprintln!("Error calculating expression: {}", e);
+                eprintln!("Error calculating expression:\n{}", e);
                 continue;
             }
         }

@@ -1,4 +1,5 @@
 use crate::{
+    errors::SyaError,
     number::Number,
     tokenizer::{Operator, Precedence, Token, Tokenizer},
 };
@@ -107,7 +108,7 @@ fn test_calculate() {
     assert_eq!(Some(Number::Integer(970)), sya.out);
 
     sya.new_input("").expect("Should Parse");
-    assert_eq!(Err("Invalid Operation".to_string()), sya.calculate());
+    assert_eq!(Err(SyaError::InvalidInput), sya.calculate());
     assert_eq!(None, sya.out);
 }
 
@@ -127,10 +128,7 @@ fn test_paren() {
     assert_eq!(Some(Number::Integer(1)), sya.out);
 
     sya.new_input("5 ) + 1").expect("Should Parse");
-    assert_eq!(
-        Err("Expected Open Parenthesis '('".to_string()),
-        sya.calculate()
-    );
+    assert_eq!(Err(SyaError::ExpectedChar('(')), sya.calculate());
 }
 
 #[test]
@@ -153,6 +151,6 @@ fn test_float() {
     assert_eq!(Some(Number::Float(4.5)), sya.out);
 
     sya.new_input("5 / 0").expect("Should Parse");
-    assert_eq!(Err("Invalid Operation".to_string()), sya.calculate());
+    assert_eq!(Err(SyaError::DivisionByZero), sya.calculate());
     assert_eq!(None, sya.out);
 }

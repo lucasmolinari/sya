@@ -1,3 +1,4 @@
+use crate::errors::SyaError;
 use crate::number::Number;
 
 #[derive(Debug, PartialEq, PartialOrd, Clone)]
@@ -64,7 +65,7 @@ impl Tokenizer {
         self.read_position += 1;
     }
 
-    pub fn parse(&mut self) -> Result<&Vec<Token>, String> {
+    pub fn parse(&mut self) -> Result<&Vec<Token>, SyaError> {
         while self.ch != '\0' {
             self.skip_space();
             match self.ch {
@@ -83,9 +84,9 @@ impl Tokenizer {
                 ')' => self.tokens.push(Token::CLOSE),
                 _ => {
                     if !self.ch.is_digit(10) {
-                        return Err(format!("Invalid input received: {}", self.ch));
+                        return Err(SyaError::InvalidChar(self.ch));
                     }
-                    let number = self.read_number();
+                    let number = self.read_number()?;
                     self.tokens.push(Token::Number(number));
                     continue;
                 }
@@ -98,7 +99,6 @@ impl Tokenizer {
     fn handle_unary(&mut self, precedence: Precedence) -> Token {
         match self.tokens.last() {
             Some(Token::CLOSE) | Some(Token::Number(_)) => self.op_token(self.ch, precedence),
-            // Some(Token::UNARY(_)) => self.op_token(self.ch, precedence),
             _ => Token::UNARY(self.ch),
         }
     }
@@ -107,7 +107,7 @@ impl Tokenizer {
         Token::Operator(Operator { sign, precedence })
     }
 
-    fn read_number(&mut self) -> Number {
+    fn read_number(&mut self) -> Result<Number, SyaError> {
         let pos = self.position;
         while self.ch.is_digit(10) || self.ch == '.' {
             self.read();
@@ -115,9 +115,17 @@ impl Tokenizer {
 
         let n = &self.input[pos..self.position];
         if n.contains('.') {
-            Number::Float(n.parse().unwrap())
+            let parsed = match n.parse::<f64>() {
+                Ok(f) => f,
+                Err(_) => return Err(SyaError::NumberOverflow(n.to_string())),
+            };
+            Ok(Number::Float(parsed))
         } else {
-            Number::Integer(n.parse().unwrap())
+            let parsed = match n.parse::<i64>() {
+                Ok(f) => f,
+                Err(_) => return Err(SyaError::NumberOverflow(n.to_string())),
+            };
+            Ok(Number::Integer(parsed))
         }
     }
 

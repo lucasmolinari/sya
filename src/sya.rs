@@ -1,4 +1,4 @@
-use crate::number::Number;
+use crate::{errors::SyaError, number::Number};
 
 use super::tokenizer::{Token, Tokenizer};
 
@@ -9,7 +9,7 @@ pub struct Sya {
     pub out: Option<Number>,
 }
 impl Sya {
-    pub fn new(input: &str) -> Result<Sya, String> {
+    pub fn new(input: &str) -> Result<Sya, SyaError> {
         let mut s = Sya {
             input: Vec::new(),
             rpn_stack: Vec::new(),
@@ -19,7 +19,7 @@ impl Sya {
         Ok(s)
     }
 
-    pub fn new_input(&mut self, input: &str) -> Result<(), String> {
+    pub fn new_input(&mut self, input: &str) -> Result<(), SyaError> {
         let mut tokenizer = Tokenizer::new(input);
         let tokens = tokenizer.parse()?;
         self.input = tokens.clone();
@@ -28,7 +28,7 @@ impl Sya {
         Ok(())
     }
 
-    pub fn calculate(&mut self) -> Result<(), String> {
+    pub fn calculate(&mut self) -> Result<(), SyaError> {
         self.rpn()?;
         let mut operation_stack = Vec::new();
         for token in &self.rpn_stack {
@@ -37,21 +37,18 @@ impl Sya {
                 Token::UNARY(s) => {
                     let n = match operation_stack.pop() {
                         Some(n) => n,
-                        None => return Err("Empty operation stack".to_string()),
+                        None => return Err(SyaError::ExpectedStackSize(1)),
                     };
                     match s {
                         '-' => operation_stack.push(n.negate()),
                         '+' => operation_stack.push(n),
-                        _ => return Err("Wrong unary sign".to_string()),
+                        _ => return Err(SyaError::WrongUnary(s.clone())),
                     };
                 }
 
                 Token::Operator(o) => {
                     if operation_stack.len() < 2 {
-                        return Err(format!(
-                            "Operation stack doesn't have enough arguments. OP: {:?} STACK:{:?}",
-                            o, operation_stack
-                        ));
+                        return Err(SyaError::ExpectedStackSize(2));
                     }
 
                     let b = operation_stack.pop().unwrap();
@@ -62,28 +59,25 @@ impl Sya {
                         '-' => a.checked_sub(b),
                         '*' => a.checked_mul(b),
                         '/' => a.checked_div(b),
-                        '^' => a.checked_pow(b.as_u32()),
-                        _ => None,
+                        '^' => a.checked_pow(b.as_u32()?),
+                        _ => Err(SyaError::InvalidOperation(o.sign)),
                     };
 
-                    match result {
-                        Some(i) => operation_stack.push(i),
-                        None => return Err("Invalid Operation".to_string()),
-                    }
+                    operation_stack.push(result?);
                 }
-                _ => return Err("Invalid Token fould in RPN".to_string()),
+                _ => return Err(SyaError::InvalidToken(token.clone())),
             }
         }
 
         if operation_stack.len() != 1 {
-            return Err("Invalid Operation".to_string());
+            return Err(SyaError::InvalidInput);
         }
         let last = operation_stack.last().unwrap();
         self.out = Some(last.clone());
         Ok(())
     }
 
-    fn rpn(&mut self) -> Result<(), &str> {
+    fn rpn(&mut self) -> Result<(), SyaError> {
         let mut holding_stack: Vec<&Token> = Vec::new();
         for token in &self.input {
             match token {
@@ -99,7 +93,7 @@ impl Sya {
                     }
                     match holding_stack.last() {
                         Some(_) => holding_stack.pop(),
-                        None => return Err("Expected Open Parenthesis '('"),
+                        None => return Err(SyaError::ExpectedChar('(')),
                     };
                 }
                 Token::Operator(o) => {
