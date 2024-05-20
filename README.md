@@ -23,7 +23,7 @@ First, you can clone the project with `git clone https://github.com/lucasmolinar
 
 Then you can just use `cargo run` or `cargo run --release` inside the sya directory. (For the Rust/Cargo installation, please refer to  the [Cargo Book](https://doc.rust-lang.org/cargo/getting-started/installation.html))
 
-When the program starts, you can start writting mathematical expressions. Examples:
+When the program starts, you can start writing mathematical expressions. Examples:
 ```
 > (2 + 4) * (4 + 6) 
 RPN: 2 4 + 4 6 + *
